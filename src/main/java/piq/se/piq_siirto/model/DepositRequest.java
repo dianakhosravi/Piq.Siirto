@@ -4,18 +4,17 @@ import lombok.Builder;
 import lombok.Data;
 
 import javax.persistence.*;
-import java.util.HashMap;
-import java.util.Map;
 
 @Data
 @Entity
 @Builder
-public class Merchant {
+public class DepositRequest {
 
     @Id
     private String merchantId;
-
     @OneToOne
-    private MerchantAttributes merchantAttributes;
+    private User user;
+    @OneToOne
+    private MerchantAttributes attributes;
 
 }

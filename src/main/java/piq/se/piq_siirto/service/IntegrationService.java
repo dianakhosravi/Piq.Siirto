@@ -11,7 +11,7 @@ public class IntegrationService {
     UserDao userDao;
 
     @Autowired
-    MerchantDao merchantDao;
+    DepositReqDao depositReqDao;
 
     @Autowired
     MerchantAttributesDao merchantAttributesDao;
@@ -20,32 +20,41 @@ public class IntegrationService {
 
         User user = User.builder()
                 .userId("123456")
-                .sessionId("HT04D1QAAAAABQDGPM5QAAA")
+                .sessionId("2")
+                .requestAmount(100.0)
                 .build();
         userDao.save(user);
 
 
-        MerchantAttributes merchantAttributes = MerchantAttributes.builder()
+        MerchantAttributes attributes = MerchantAttributes.builder()
                 .bonusCode("A123")
                 .channelId("mobile")
                 .build();
-        merchantAttributesDao.save(merchantAttributes);
+        merchantAttributesDao.save(attributes);
 
 
-        Merchant merchant = Merchant.builder()
+        DepositRequest depositRequest = DepositRequest.builder()
                 .merchantId("1")
-                .merchantAttributes(merchantAttributes)
+                .user(user)
+                .attributes(attributes)
                 .build();
-        merchantDao.save(merchant);
+        depositReqDao.save(depositRequest);
 
+    }
 
+    public User findUserById (String userId){
+        return (userId!=null)?
+                userDao.findAll().stream().
+                        filter(c->c.getUserId().equalsIgnoreCase(userId)).findAny().get():
+                null;
 
+    }
 
-
-
-
-
-
+    public DepositRequest findDepositRequest(String userId){
+        return (userId!=null)?
+                depositReqDao.findAll().stream().
+                        filter(c->c.getUser().getUserId().equalsIgnoreCase(userId)).findAny().get():
+                null;
 
     }
 }
