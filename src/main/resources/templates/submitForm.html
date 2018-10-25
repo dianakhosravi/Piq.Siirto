@@ -1,0 +1,18 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Submission Form</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+</head>
+<body>
+<h1>Form</h1>
+<form action="#" th:action="@{/paymentiq/api}"  method="post">
+    <p>MerchantId: <input type="text" th:value="${merchant.merchantId}" /></p>
+    <p>SessionId: <input type="text" th:value="${user.sessionId}" /></p>
+    <p>UserId: <input type="text" th:value="${user.userId}" /></p>
+    <p>BonusCode: <input type="text" th:value="${merchantAttributes.bonusCode}" /></p>
+    <p>ChannelId: <input type="text" th:value="${merchantAttributes.ChannelId}" /></p>
+    <p><input type="submit" value="Submit" /> </p>
+</form>
+</body>
+</html>
