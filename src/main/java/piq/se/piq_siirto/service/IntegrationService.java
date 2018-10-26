@@ -24,6 +24,9 @@ public class IntegrationService {
     @Autowired
     AccountDao accountDao;
 
+    @Autowired
+    TransactionsDao transactionsDao;
+
     CreditCardDeposit creditCardDeposit;
 
     public void initialRepository() {
@@ -91,7 +94,12 @@ public class IntegrationService {
                 accountDao.findAll().stream().
                         filter(c->c.getUser().getUserId().equalsIgnoreCase(userId)).findAny().get():
                 null;
-
+    }
+    public Transactions findTransactionsListByUserId (String userId){
+        return (userId != null) ?
+                transactionsDao.findAll().stream().
+                        filter(c->c.getUserId().equalsIgnoreCase(userId)).findAny().get():
+                null;
 
     }
 }

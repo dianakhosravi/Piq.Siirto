@@ -8,11 +8,10 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import piq.se.piq_siirto.model.*;
 import piq.se.piq_siirto.service.IntegrationService;
+import piq.se.piq_siirto.service.TransactionsDao;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
+import java.time.LocalDate;
+import java.util.*;
 
 @Controller
 public class MainController {
@@ -20,12 +19,20 @@ public class MainController {
     @Autowired
     IntegrationService integrationService;
 
+    @Autowired
+    TransactionsDao transactionsDao;
+
+
     Double currentBalance;
 
-    Set<DepositResponse> transactions = new HashSet<>();
+    Set<DepositResponse> depositResponses = new HashSet<>();
 
     DepositRequest depositRequest;
     DepositResponse depositResponse;
+    Transaction transaction;
+    Transactions transactions;
+    Set<Transactions>transactionsList = new HashSet<>();
+
 
     @GetMapping("/paymentiq/api")
     public String submitForm(Model model, User user) {
@@ -81,7 +88,18 @@ public class MainController {
                     .txState("Successful")
                     .messageBodyList(Collections.singletonList(messageBody)).build();
 
-            transactions.add(depositResponse);
+            depositResponses.add(depositResponse);
+
+            transaction = Transaction.builder().amount(currentBalance)
+                    .created(LocalDate.now().toString()).state("Successful")
+                    .txAmount(depositRequest.getUser().getRequestAmount())
+                    .txAmountCy("SEK").txType("NetellerDeposit").build();
+
+
+            transactions = Transactions.builder().transaction(Collections.singletonList(transaction))
+                    .userId(depositRequest.getUser().getUserId()).success(true)
+                            .merchantId(depositRequest.getMerchantId()).build();
+            transactionsList.add(transactions);
         }
         else{
             ErrorBody errorBody = ErrorBody.builder().keys(Arrays.asList("creditcarddeposit.status.err_declined_other_reason"))
@@ -94,14 +112,21 @@ public class MainController {
                     .build();
 
         }
+
             return  ResponseEntity.ok(depositResponse);
-
-
-
-
 
     }
 
+    @GetMapping(path = "/api/user/transactions",
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity transactions(@RequestParam String userId) {
+
+        if(userId!=null) {
+            integrationService.findUserById(userId).setTransactionsList(transactionsList);
+            return ResponseEntity.ok(transactionsList);
+        }
+        else return null;
+    }
 
 
 }
