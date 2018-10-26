@@ -3,9 +3,10 @@ package piq.se.piq_siirto.model;
 import lombok.Builder;
 import lombok.Data;
 
-import javax.persistence.Entity;
-import javax.persistence.Id;
+import javax.persistence.*;
 import java.util.ArrayList;
+import java.util.List;
+
 
 @Data
 @Builder
@@ -13,10 +14,14 @@ import java.util.ArrayList;
 public class DepositResponse {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
     private Integer id;
-
     private Boolean success;
-    private ArrayList<String>messages;
-    private ArrayList<String>errors;
+    private String txState;
+    @OneToMany()
+    private List<MessageBody> messageBodyList;
+    @OneToMany()
+    private List<ErrorBody> errorBodyList;
+
 
 }
