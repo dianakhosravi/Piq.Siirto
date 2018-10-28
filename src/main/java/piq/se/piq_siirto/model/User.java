@@ -6,8 +6,6 @@ import lombok.Data;
 import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
 import javax.persistence.Id;
-import javax.persistence.OneToOne;
-import java.util.HashSet;
 import java.util.Set;
 
 @Data
@@ -16,11 +14,9 @@ import java.util.Set;
 public class User {
     @Id
     private String userId;
-    private String sessionId;
-    private Double requestAmount;
-
+    private String phoneNumber;
     @ElementCollection
-    Set<Transactions> transactionsList;
+    Set<Transaction> transactionsList;
 
 
 

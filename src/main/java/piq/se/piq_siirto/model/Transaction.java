@@ -5,19 +5,19 @@ import lombok.Data;
 
 import javax.persistence.Entity;
 import javax.persistence.Id;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Data
 @Builder
 public class Transaction {
-    private String state;
-    private Double txAmount;
-    private String txAmountCy;
+
     @Id
-    private String txId;
-    private String txRefId;
-    private String txType;
+    private String transactionId;
+    private String accountId;
     private Double amount;
-    private String created;
+    private LocalDateTime created;
+    private String txType;
 
 }
