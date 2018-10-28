@@ -3,13 +3,9 @@ package piq.se.piq_siirto.controller;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.web.servlet.WebMvcProperties;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.ModelAndView;
 import piq.se.piq_siirto.model.*;
 import piq.se.piq_siirto.service.IntegrationService;
 
@@ -18,10 +14,8 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.ProtocolException;
 import java.net.URL;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 
 
@@ -38,16 +32,16 @@ public class MainController {
     Double currentBalance;
 
     @GetMapping("/")
-    public String  index(Model model, Amount amount){
-
+    public String  index(Model model,Amount amount){
+        model.addAttribute("balance",integrationService.findAccountByUserId(USER_ID).getBalance());
+        model.addAttribute("userId",USER_ID);
         return "index";
     }
 
-    @PostMapping("/deposit")
-    public String  index2(Model model, Amount amount) throws IOException, JSONException {
+    @RequestMapping(value = "/deposit", method ={ RequestMethod.GET, RequestMethod.POST })
+    public String  deposit(Model model, Amount amount) throws IOException, JSONException {
 
         String url = "https://test-api.paymentiq.io/paymentiq/api/siirto/deposit/validate";
-
 /*
         provide body to post
 */
@@ -58,20 +52,68 @@ public class MainController {
         data.put("amount",amount.getValue());
         data.put("phonenumber","+358509999991");
 
-        JSONObject jsonObject = getStream(url, data);
+        JSONObject jsonObject = getResponse(url, data);
 
         Account account = integrationService.findAccountByUserId(USER_ID);
 
         if((Boolean) jsonObject.get("success")){
             account.setBalance(account.getBalance()+Double.parseDouble(amount.getValue()));
-        }
+            integrationService.saveAccount(account);
 
-        model.addAttribute("transaction",null);
-        model.addAttribute("value",amount.getValue());
-        return  "redirect:/";
+        }
+        integrationService.saveTransaction(Transaction.builder()
+                .accountId(account.getAccountId())
+                .amount(Double.parseDouble(amount.getValue()))
+                .created(LocalDateTime.now())
+                .txType(TransactionType.DEPOSIT)
+                .build());
+
+        model.addAttribute("transactions",integrationService.getAllTransaction(account.getAccountId()));
+        model.addAttribute("balance",account.getBalance());
+        model.addAttribute("userId",USER_ID);
+        return  "index";
     }
 
-    private JSONObject getStream(String url,JSONObject data) throws IOException, JSONException {
+
+    @RequestMapping(value = "/withdrawal",method ={ RequestMethod.GET, RequestMethod.POST })
+    public String withdrawRequest(Model model, Amount amount) throws IOException, JSONException {
+
+        String url = "https://test-api.paymentiq.io/paymentiq/api/siirto/withdrawal/validate";
+
+/*
+        provide body to post
+*/
+
+        JSONObject data = new JSONObject();
+        data.put("sessionId",UUID.randomUUID());
+        data.put("userId",USER_ID);
+        data.put("merchantId",MERCHANT_ID);
+        data.put("amount",amount.getValue());
+        data.put("phonenumber","+358509999991");
+
+        JSONObject jsonObject = getResponse(url, data);
+
+        Account account = integrationService.findAccountByUserId(USER_ID);
+        Transaction transaction;
+        if((Boolean) jsonObject.get("success")){
+            account.setBalance(account.getBalance()-Double.parseDouble(amount.getValue()));
+            integrationService.saveAccount(account);
+
+            integrationService.saveTransaction(Transaction.builder()
+                    .accountId(account.getAccountId())
+                    .amount(Double.parseDouble(amount.getValue()))
+                    .created(LocalDateTime.now())
+                    .txType(TransactionType.WITHDRAWAL)
+                    .build());
+        }
+        model.addAttribute("transactions",integrationService.getAllTransaction(account.getAccountId()));
+        model.addAttribute("balance",account.getBalance());
+        model.addAttribute("userId",USER_ID);
+        return  "index";
+    }
+
+
+    private JSONObject getResponse(String url, JSONObject data) throws IOException, JSONException {
         URL obj = new URL(url);
         HttpURLConnection con = (HttpURLConnection) obj.openConnection();
         // Setting basic post request
@@ -98,98 +140,5 @@ public class MainController {
 
         return new JSONObject(response.toString());
     }
-/*
-
-    @PostMapping("/")
-    public ResponseEntity withdrawRequest(Model model, Amount amount,  User user) throws IOException, JSONException {
-
-
-
-
-
-
-        //printing result from response
-        System.out.println(response.toString());
-
-        return ResponseEntity.ok(withdrawRequest);
-    }
-*/
-
-
-  /*
-
-    @PostMapping(value = "/")
-    @ResponseBody
-    public ResponseEntity<WithdrawResponse> getWithdrawalResponse(@RequestBody WithdrawRequest withdrawRequest) {
-        Account account= integrationService.findAccountByUserId(withdrawRequest.getUser().getUserId());
-        Double balance = account.getBalance();
-
-        if(balance + withdrawRequest.getUser().getRequestAmount()>0){
-            currentBalance = balance + withdrawRequest.getUser().getRequestAmount();
-            MessageBody messageBody = MessageBody.builder().
-                    label("Amount deposited to player account")
-                    .keys(Arrays.asList(CreditCardDeposit.receiptDepositAccountToCharge.toString(),
-                            "receiptDepositAccountToCharge"))
-                    .value(withdrawRequest.getUser().getRequestAmount().toString()).build();
-
-            withdrawResponse = WithdrawResponse.builder()
-                    .success(true)
-                    .txState("Successful")
-                    .messageBodyList(Collections.singletonList(messageBody)).build();
-
-            withdrawResponses.add(withdrawResponse);
-
-            transaction = Transaction.builder().amount(currentBalance)
-                    .created(LocalDate.now().toString()).state("Successful")
-                    .txAmount(withdrawRequest.getUser().getRequestAmount())
-                    .txAmountCy("SEK").txType("EutellerWithdraw").build();
-
-
-            transactions = Transactions.builder().transaction(Collections.singletonList(transaction))
-                    .userId(withdrawRequest.getUser().getUserId()).success(true)
-                            .merchantId(withdrawRequest.getMerchantId()).build();
-            transactionsList.add(transactions);
-        }
-        else{
-            ErrorBody errorBody = ErrorBody.builder().keys(Arrays.asList("creditcarddeposit.status.err_declined_other_reason"))
-                    .field("").msg("Invalid CVV").build();
-
-            withdrawResponse = WithdrawResponse.builder()
-                    .success(false)
-                    .txState("Failed")
-                    .errorBodyList(Collections.singletonList(errorBody))
-                    .build();
-
-        }
-
-            return  ResponseEntity.ok(withdrawResponse);
-
-    }
-
-    @GetMapping(path = "/api/user/transactions",
-            produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity transactions(@RequestParam String userId) {
-
-        if(userId!=null) {
-            integrationService.findUserById(userId).setTransactionsList(transactionsList);
-            return ResponseEntity.ok(transactionsList);
-        }
-        else return null;
-    }
-
-  @GetMapping("/transactionsShow")
-    public ModelAndView transactionsShow(@RequestParam String userId) {
-        if(userId!=null) {
-            integrationService.findUserById(userId).setTransactionsList(transactionsList);
-            ModelAndView modelAndView = new ModelAndView("transactionList");
-
-            modelAndView.addObject(transactionsList);
-            modelAndView.addObject("UserId", integrationService.findUserById(userId));
-            modelAndView.addObject("amount", transaction.getAmount());
-            return modelAndView;
-        }
-        return null;
-    }*/
-
 
 }

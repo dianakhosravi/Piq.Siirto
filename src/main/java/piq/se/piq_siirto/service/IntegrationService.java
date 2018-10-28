@@ -3,9 +3,14 @@ package piq.se.piq_siirto.service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import piq.se.piq_siirto.Dao.AccountDao;
+import piq.se.piq_siirto.Dao.TransactionDao;
 import piq.se.piq_siirto.Dao.UserDao;
 import piq.se.piq_siirto.model.Account;
+import piq.se.piq_siirto.model.Transaction;
 import piq.se.piq_siirto.model.User;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class IntegrationService {
@@ -16,6 +21,8 @@ public class IntegrationService {
     @Autowired
     AccountDao accountDao;
 
+    @Autowired
+    TransactionDao transactionDao;
 
     public void initialRepository() {
 
@@ -27,7 +34,6 @@ public class IntegrationService {
 
 
         Account account = Account.builder()
-                .accountId(1)
                 .user(user)
                 .balance(200.0)
                 .build();
@@ -50,4 +56,19 @@ public class IntegrationService {
                 null;
     }
 
+    public Account saveAccount(Account account) {
+        return accountDao.save(account);
+    }
+
+    public Transaction saveTransaction(Transaction transaction) {
+        return transactionDao.save(transaction);
+    }
+
+    public List<Transaction> getAllTransaction(Long accountId) {
+        return accountId != null ?
+                transactionDao.findAll().stream()
+                        .filter(t -> t.getAccountId() == accountId)
+                        .collect(Collectors.toList())
+                : null;
+    }
 }
